@@ -11,16 +11,16 @@ class Ray {
 private:
 	vec3 origin;
 	vec3 direction;
-	double t; //transportation time
-	double t_min, t_max;
+	float t; //transportation time
+	float t_min, t_max;
 
 public:	
-	Ray(const vec3& ori, const vec3& dir, const double _t = 0.0) : origin(ori), direction(dir), t(_t) {
+	Ray(const vec3& ori, const vec3& dir, const float _t = 0.0) : origin(ori), direction(dir), t(_t) {
 		t_min = 0.0;
-		t_max = std::numeric_limits<double>::max();
+		t_max = std::numeric_limits<float>::max();
 	}
 
-	vec3 current_ray(double _t)
+	vec3 current_ray(float _t)
 	{
 		this->t = _t;
 		return this->origin + static_cast<float>(this->t) * this->direction;

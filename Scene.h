@@ -1,5 +1,5 @@
 #pragma once
-#include"Ray.hpp"
+#include"Ray.h"
 #include"film.h"
 
 class Scene 
