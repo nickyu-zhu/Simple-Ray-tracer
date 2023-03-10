@@ -166,7 +166,7 @@ void readfile(const char* filename)
                         cerr << "Reached Maximum Number of Objects " << maxNumObjects << " Will ignore further objects\n";
                     }
                     else {
-                        object* obj = &(objects[numObjects]);
+                        Object* obj = &(objects[numObjects]);
 
                         // Set the object's light properties
                         for (i = 0; i < 4; i++) {
