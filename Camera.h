@@ -4,6 +4,7 @@
 #include<glm/gtc/type_ptr.hpp>
 #include"Ray.h"
 #include"Sample.h"
+#include<vector>
 
 const float pi = 3.14159265;
 
@@ -15,6 +16,11 @@ private:
 	glm::vec3 upVector;
 	float fov;
 
+	int m_ViewportWidth = 0, m_ViewportHeight = 0;
+	std::vector<glm::vec3> m_RayDirections;
+	
+
+public:
 	Camera(float lookfromx, float lookfromy, float lookfromz, float lookatx, float lookaty, float lookatz, float upx, float upy, float upz, float _fov)
 	{
 		this->camPosition = glm::vec3(lookfromx, lookfromy, lookfromz);
@@ -23,5 +29,19 @@ private:
 		this->fov = _fov;
 	}
 
-	void generateRay(Sample& sample, Ray& ray);
+	glm::vec3 getCamPositon() { return camPosition; }
+	glm::vec3 getCamCenter() { return camCenter; }
+	glm::vec3 getupVector() { return upVector; }
+	float getFov() { return fov; }
+
+	void viewPortresize(int w, int h)
+	{
+		m_ViewportWidth = w;
+		m_ViewportHeight = h;
+	}
+
+	const std::vector<glm::vec3>& GetRayDirections() const { return m_RayDirections; }
+
+	void calculateRayDirection();
+
 };

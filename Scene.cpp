@@ -1,8 +1,16 @@
 #include"Scene.h"
-#include"film.h"
+#include"Camera.h"
+#include"Sphere.hpp"
+#include"Material.hpp"
+#include<glm/glm.hpp>
 
-void Scene::render()
+void Scene::addSphere(glm::vec3 position, float radius, int MaterialIndex)
 {
-	Film film = Film(w, h);
-	film.draw();
+	Sphere sphere(position, radius, MaterialIndex);
+	Spheres.push_back(sphere);
+}
+
+void Scene::addMaterial(Material _material)
+{
+	Materials.push_back(_material);
 }

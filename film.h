@@ -2,13 +2,24 @@
 
 #include<FreeImage.h>
 #include<glm/glm.hpp>
+#include"Camera.h"
+#include"Ray.h"
+#include"Scene.h"
+#include"Intersection.hpp"
 
 class Film {
 private:
 	int w, h;
 	BYTE* pixels;
 
-	glm::vec3 PerPixel(glm::vec2 coord);
+	Scene* myActiveScene = nullptr;
+	Camera* myActiveCamera = nullptr;
+
+	glm::vec3 RayGen(uint32_t x, uint32_t y);
+
+	Intersection TraceRay(Ray ray);
+	Intersection ClosestHit(Ray ray, float hitDistance, int objectIndex);
+	Intersection Miss(Ray ray);
 
 public:
 	Film(int _w, int _h){
@@ -20,5 +31,5 @@ public:
 		delete[] pixels;
 	}
 
-	void draw();
+	void draw(Scene scene, Camera camera);
 };
