@@ -109,7 +109,7 @@ glm::vec3 Film::RayGen(uint32_t x, uint32_t y)
 		Sphere& sphere = myActiveScene->Spheres[intersection.ObjectIndex];
 		Material& material = myActiveScene->Materials[sphere.MaterialIndex];
 
-		glm::vec3 sphereColor = material.Albedo;
+		glm::vec3 sphereColor = material.emission;
 		sphereColor *= d;
 		color += sphereColor * multiplier;
 
@@ -117,7 +117,7 @@ glm::vec3 Film::RayGen(uint32_t x, uint32_t y)
 
 		ray.Origin = intersection.WorldPosition + intersection.WorldNormal * 0.0001f;
 		float random = (rand() % 100) / 100 * 0.5f - 0.5f;
-		ray.Direction = glm::reflect(ray.Direction, intersection.WorldNormal + material.Roughtness * random);
+		ray.Direction = glm::reflect(ray.Direction, intersection.WorldNormal + material.diffuse * random);
 	}
 	
 	return color;

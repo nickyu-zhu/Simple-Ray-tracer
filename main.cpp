@@ -10,16 +10,19 @@ int main(int argc, char** argv)
 	Scene scene = Scene(540, 540);
 	glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
 	float radius = 1.0f;
-	glm::vec3 Albedo = { 1.0f, 0.0f, 1.0f };
-	Material Mat(Albedo, 0.0f, 0.0f);
+	glm::vec3 emission = { 1.0f, 0.0f, 1.0f };
+	glm::vec3 diffuse = glm::vec3(0.0f);
+	glm::vec3 specular = glm::vec3(0.0f);
+	float shininess = 5.0f;
+	Material Mat(emission, diffuse, specular, shininess);
 
 	scene.addMaterial(Mat);
 	scene.addSphere(position, radius, 0);
 
 	position = glm::vec3(0.0f, -101.4f, 0.0f);
 	radius = 100.0f;
-	Mat.Albedo = { 0.2f, 0.3f, 1.0f };
-	Mat.Roughtness = 0.1f;
+	Mat.emission = { 0.2f, 0.3f, 1.0f };
+	Mat.diffuse[0] = 0.1f;
 
 	scene.addMaterial(Mat);
 	scene.addSphere(position, radius, 1);

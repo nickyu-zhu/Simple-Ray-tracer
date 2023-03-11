@@ -3,6 +3,7 @@
 #include<iostream>
 #include<cmath>
 #include<random>
+#include"Utils.h"
 
 #undef PI
 #define PI 3.141592653589793f
