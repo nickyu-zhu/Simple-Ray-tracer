@@ -1,8 +1,6 @@
 #pragma once
 #include "Ray.h"
 
-const float pi = 3.14159265;
-
 class Camera
 {
 private:
@@ -12,8 +10,8 @@ private:
 	vec3 u, v, w;
 	float fovy;
 	int width, height;
-
-	Camera(vec3 _eye, vec3 _center, vec3 _up, float _fovy)
+public:
+	Camera(vec3 _eye, vec3 _center, vec3 _up, float _fovy, int _w, int _h)
 	{
 		eye = _eye;
 		center = _center;
@@ -22,6 +20,8 @@ private:
 		w = glm::normalize(eye - center);
 		u = glm::normalize(glm::cross(up, w));
 		v = glm::cross(w, u);
+		width = _w;
+		height = _h;
 	}
 
 	Ray RayThruPixel(int x, int y) 
@@ -30,8 +30,8 @@ private:
 		// https://cseweb.ucsd.edu/~alchern/teaching/cse167_fa21/7-1RayTracing.pdf
 		// https://cseweb.ucsd.edu/~viscomp/classes/cse167/wi23/slides/lecture16.pdf
 		
-		float alpha = tan(pi / 360 * fovy) / height * (2 * x - width);
-		float beta = tan(pi / 360 * fovy) / height * (height - 2 * y);
+		float alpha = tan(pi * fovy / 360) * (2 * x - width) / height;
+		float beta = tan(pi * fovy / 360) * (height - 2 * y) / height;
 		vec3 dir = glm::normalize(alpha * u + beta * v - w);
 		return Ray(eye, dir);
 	}

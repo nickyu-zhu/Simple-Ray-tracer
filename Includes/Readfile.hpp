@@ -52,12 +52,13 @@ void readfile(const char* filename)
                 else if (cmd == "camera") {
                     validinput = readvals(s, 10, values); // 10 values eye:3 cen:3 up:3 fov:1
                     if (validinput) {
-                        // eyeinit, lookfrom
-                        eyeInit = { values[0], values[1], values[2] };
+                        // eye, lookfrom
+                        eye = vec3(values[0], values[1], values[2]);
                         // center, lookat
-                        center = { values[3], values[4], values[5] };
-                        // upinit
-                        upInit = { values[6], values[7], values[8] };
+                        center = vec3(values[3], values[4], values[5]);
+                        // up
+                        up = glm::normalize(vec3(values[6], values[7], values[8]));
+                        up = Transform::upvector(up, center - eye);
                         // fovy
                         fovy = values[9];
                     }
@@ -99,7 +100,7 @@ void readfile(const char* filename)
                 else if (cmd == "attenuation") {
                     validinput = readvals(s, 3, values);
                     if (validinput) {
-                        attenuation = { values[0], values[1], values[2] };
+                        attenuation = vec3(values[0], values[1], values[2]);
                     }
                 }
                 // material settings 
@@ -155,7 +156,7 @@ void readfile(const char* filename)
                     else {
                         validinput = readvals(s, 3, values);
                         if (validinput) {
-                            vertices[numVertices] = { values[0], values[1], values[2] };
+                            vertices[numVertices] = vec3(values[0], values[1], values[2]);
                             numVertices++;
                         }
                     }
@@ -185,7 +186,7 @@ void readfile(const char* filename)
                             validinput = readvals(s, 4, values);
                             if (validinput) {
                                 obj->type = sphere;
-                                obj->position = { values[0], values[1], values[2] };
+                                obj->center = vec3(values[0], values[1], values[2]);
                                 obj->radius = values[3];
                             }
                             else {
@@ -225,9 +226,8 @@ void readfile(const char* filename)
                 else if (cmd == "rotate") {
                     validinput = readvals(s, 4, values);
                     if (validinput) {
-                        mat4 rotateMtx = mat4(Transform::rotate(values[3], { values[0],values[1],values[2] }));
+                        mat4 rotateMtx = mat4(Transform::rotate(values[3], vec3(values[0],values[1],values[2])));
                         *(&transfstack.top()) = transfstack.top() * rotateMtx;
-
                     }
                 }
                 else if (cmd == "pushTransform") transfstack.push(transfstack.top());
@@ -235,13 +235,12 @@ void readfile(const char* filename)
                     if (transfstack.size() <= 1) cerr << "Stack has no elements. Cannot Pop\n";
                     else transfstack.pop();
                 }
+                else if (cmd == "maxverts"){// Do nothing;
+                }
                 else cerr << "Unknown Command: " << cmd << " Skipping \n";
             }
             getline(in, str);
         }
-        eye = eyeInit;
-        up = upInit;
-        amount = amountInit;
     }
     else {
         cerr << "Unable to Open Input Data File " << filename << "\n";

@@ -16,12 +16,8 @@
 int w = 500, h = 500; // size
 int maxDepth = 5;
 /** Camera **/
-vec3 eyeInit(0.0, 0.0, 5.0); // Initial eye position, also for resets
-vec3 upInit(0.0, 1.0, 0.0); // Initial up position, also for resets
 vec3 center(0.0, 0.0, 0.0); // Center look at point 
 float fovy = 90.0; // For field of view
-/** Transformation **/
-int amountInit = 5;
 /** Lights **/
 vec3 attenuation(1.0, 0.0, 0.0);
 /** Materials **/
@@ -31,12 +27,8 @@ GLfloat ambient[4] = {0.2, 0.2, 0.2, 1.0};
 EXTERN int w, h; // size
 EXTERN int maxDepth;
 /** Camera **/
-EXTERN vec3 eyeInit;
-EXTERN vec3 upInit;
 EXTERN vec3 center;
 EXTERN float fovy;
-/** Transformation **/
-EXTERN int amountInit;
 /** Lights **/
 EXTERN vec3 attenuation;
 /** Materials **/
@@ -51,10 +43,6 @@ const char* outputFilename;
 EXTERN vec3 eye; // The (regularly updated) vector coordinates of the eye 
 EXTERN vec3 up;  // The (regularly updated) vector coordinates of the up 
 
-/** Transformation **/
-EXTERN int amount; // The amount of rotation degrees for each arrow press
-static enum { rotate, translate, scale } transOperation; // which operation to transform 
-
 /** Geometry **/
 // shape
 enum shape { sphere, triangle };
@@ -66,7 +54,7 @@ EXTERN int numVertices;
 /** Lights **/ 
 // identifying directional & point depends on the 4th dimention of position
 const int maxNumLights = 10;
-EXTERN GLfloat lightPos[4 * maxNumLights]; // Light Positions
+EXTERN GLfloat lightPos[4 * maxNumLights]; // Light Positions/Directions
 EXTERN GLfloat lightColor[4 * maxNumLights]; // Light Colors
 EXTERN int numLights;                     // How many lights are used 
 
@@ -83,7 +71,7 @@ EXTERN int numObjects;
 EXTERN struct Object {
 	shape type;
 	GLfloat radius; // radius of the obj if it's a sphere
-	vec3 position; // positin of the obj if it's a sphere
+	vec3 center; // center of the obj if it's a sphere
 	int indices[3];
 	mat4 transform;
 

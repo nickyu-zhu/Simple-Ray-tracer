@@ -5,7 +5,7 @@ mat3 Transform::rotate(const float degrees, const vec3& axis)
     float cosValue = cos(pi / 180 * (degrees));
     float sinValue = sin(pi / 180 * (degrees));
     mat3 identity = mat3(1.0f);
-    vec3 axisUnit = normalize(axis);
+    vec3 axisUnit = glm::normalize(axis);
     float x = axisUnit.x;
     float y = axisUnit.y;
     float z = axisUnit.z;
@@ -26,7 +26,7 @@ void Transform::left(float degrees, vec3& eye, vec3& up)
 
 void Transform::up(float degrees, vec3& eye, vec3& up)
 {
-    vec3 axis = cross(eye, up);
+    vec3 axis = glm::cross(eye, up);
     mat3 rotation = Transform::rotate(degrees, axis);
     eye = rotation * eye;
     up = glm::normalize(glm::cross(axis, eye));
@@ -82,4 +82,12 @@ mat4 Transform::translate(const float& tx, const float& ty, const float& tz)
         vec4(0, 0, 1, 0),
         vec4(tx, ty, tz, 1));
     return translateMtx;
+}
+
+vec3 Transform::upvector(const vec3& up, const vec3& zvec)
+{
+    vec3 x = glm::cross(up, zvec);
+    vec3 y = glm::cross(zvec, x);
+    vec3 ret = glm::normalize(y);
+    return ret;
 }
