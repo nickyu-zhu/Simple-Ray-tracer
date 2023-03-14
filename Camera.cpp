@@ -18,8 +18,9 @@ void Camera::calculateRayDirection()
 		{
 			float radian = glm::radians(fov / 2);
 			
-			float alpha = glm::tan(radian) / aspect * (x - (m_ViewportWidth / 2)) / (m_ViewportWidth / 2);
+			float alpha = glm::tan(radian) * (x - (m_ViewportWidth / 2)) / (m_ViewportWidth / 2);
 			float beta = glm::tan(radian) * (y - (m_ViewportHeight / 2)) / (m_ViewportHeight / 2);
+			alpha *= aspect;
 
 			glm::vec3 direction = alpha * u + beta * v - w;
 			direction = glm::normalize(direction);

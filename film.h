@@ -18,7 +18,8 @@ private:
 	glm::vec3 RayGen(uint32_t x, uint32_t y);
 
 	Intersection TraceRay(Ray ray);
-	Intersection ClosestHit(Ray ray, float hitDistance, int objectIndex);
+	Intersection ClosestHitSphere(Ray ray, float hitDistance, int objectIndex);
+	Intersection ClosestHitTriangle(Ray ray, float hitDistance, int objectIndex, vec3* vertices);
 	Intersection Miss(Ray ray);
 
 public:

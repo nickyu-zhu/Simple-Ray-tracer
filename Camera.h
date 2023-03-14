@@ -6,8 +6,6 @@
 #include"Sample.h"
 #include<vector>
 
-const float pi = 3.14159265;
-
 class Camera
 {
 private:
@@ -21,11 +19,11 @@ private:
 	
 
 public:
-	Camera(float lookfromx, float lookfromy, float lookfromz, float lookatx, float lookaty, float lookatz, float upx, float upy, float upz, float _fov)
+	Camera(glm::vec3 _camPosition, glm::vec3 _center, glm::vec3 _up, float _fov)
 	{
-		this->camPosition = glm::vec3(lookfromx, lookfromy, lookfromz);
-		this->camCenter = glm::vec3(lookatx, lookaty, lookatz);
-		this->upVector = glm::vec3(upx, upy, upz);
+		this->camPosition = _camPosition;
+		this->camCenter = _center;
+		this->upVector = _up;
 		this->fov = _fov;
 	}
 
