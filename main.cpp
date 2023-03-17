@@ -10,6 +10,8 @@
 #include<glm/glm.hpp>
 #include"Material.hpp"
 #include "Transform.h"
+#include<chrono>
+#include"Object.hpp"
 
 using namespace std;
 
@@ -296,13 +298,16 @@ void readfile(const char* filename, Object* objects, Light* lights)
 
 int main(int argc, char* argv[])
 {
+    auto start_time = std::chrono::high_resolution_clock::now();
     Object* objects = new Object[maxNumObjects];
     Light* lights = new Light[maxNumLights];
 	readfile(argv[1], objects, lights);
 
 	Scene scene = Scene(width, height);
 
-    scene.Objects = objects;
+    for (int i = 0; i < numObjects; i++)
+        scene.addObject(&objects[i]);
+
     scene.Vertex = vertices;
     scene.lights = lights;
 
@@ -311,9 +316,14 @@ int main(int argc, char* argv[])
 	camera.calculateRayDirection();
 	Film film = Film(scene.w, scene.h);
 	film.draw(scene, camera);
-    printf("\nRay Tracing Finished!\n Please check the output file!");
+    printf("\nRay Tracing Finished!\n Please check the output file!\n");
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
+    std::cout << "Time taken: " << duration.count() << "seconds" << std::endl;
 
     delete[] objects;
 	cin.get();
+
 	return 0;
 }

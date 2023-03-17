@@ -5,6 +5,7 @@
 #include"Scene.h"
 #include"Intersection.hpp"
 #include<stdlib.h>
+#include"Object.hpp"
 
 extern int numObjects;
 extern int numLights;
@@ -85,7 +86,7 @@ glm::vec3 Film::RayGen(uint32_t x, uint32_t y)
 			break;
 		}
 
-		Object* object = &(myActiveScene->Objects[intersection.ObjectIndex]);
+		Object* object = (myActiveScene->Objects[intersection.ObjectIndex]);
 
 		vec3 objDiffuse = object->material.diffuse;
 		vec3 objSpecular = object->material.specular;
@@ -136,7 +137,7 @@ Intersection Film::TraceRay(Ray ray)
 	bool flag = true;
 	for (int i = 0; i < numObjects; i++)
 	{
-		Object* object = &(myActiveScene->Objects[i]);
+		Object* object = myActiveScene->Objects[i];
 
 		if (object->type == sphere)
 		{
@@ -183,16 +184,16 @@ Intersection Film::ClosestHitSphere(Ray ray, float hitDistance, int objectIndex)
 	intersection.hitDistance = hitDistance;
 	intersection.ObjectIndex = objectIndex;
 
-	Object& closestSphere = myActiveScene->Objects[objectIndex];
+	Object* closestSphere = myActiveScene->Objects[objectIndex];
 
-	mat4 invTransf = glm::inverse(closestSphere.transform);
+	mat4 invTransf = glm::inverse(closestSphere->transform);
 	vec3 oriTransf = vec3(invTransf * vec4(ray.Origin, 1.0f));
 	vec3 dirTransf = vec3(invTransf * vec4(ray.Direction, 0.0f));
 
 	glm::vec3 hitPosition = oriTransf + hitDistance * dirTransf;
-	vec3 sphereNormalObj = hitPosition - closestSphere.centerPosition;
+	vec3 sphereNormalObj = hitPosition - closestSphere->centerPosition;
 
-	vec4 hitPointWorld = closestSphere.transform * vec4(hitPosition, 1.0f);
+	vec4 hitPointWorld = closestSphere->transform * vec4(hitPosition, 1.0f);
 	vec4 sphereNormalWorld = glm::transpose(invTransf) * vec4(sphereNormalObj, 0.0f);
 
 	intersection.WorldPosition = vec3(hitPointWorld / hitPointWorld.w);
@@ -207,11 +208,11 @@ Intersection Film::ClosestHitTriangle(Ray ray, float hitDistance, int objectInde
 	intersection.hitDistance = hitDistance;
 	intersection.ObjectIndex = objectIndex;
 
-	Object& closestTriangle = myActiveScene->Objects[objectIndex];
+	Object* closestTriangle = myActiveScene->Objects[objectIndex];
 
-	vec3 A = vec3(closestTriangle.transform * vec4(vertices[closestTriangle.indices[0]], 1));
-	vec3 B = vec3(closestTriangle.transform * vec4(vertices[closestTriangle.indices[1]], 1));
-	vec3 C = vec3(closestTriangle.transform * vec4(vertices[closestTriangle.indices[2]], 1));
+	vec3 A = vec3(closestTriangle->transform * vec4(vertices[closestTriangle->indices[0]], 1));
+	vec3 B = vec3(closestTriangle->transform * vec4(vertices[closestTriangle->indices[1]], 1));
+	vec3 C = vec3(closestTriangle->transform * vec4(vertices[closestTriangle->indices[2]], 1));
 
 	vec3 triNormal = glm::normalize(glm::cross(B - A, C - A));
 	vec3 P = ray.Origin + hitDistance * ray.Direction;

@@ -3,37 +3,18 @@
 #include<cmath>
 #include<random>
 #include"Ray.h"
+#include"Bbox.hpp"
 #include"Utils.h"
+#include"Object.hpp"
 typedef std::pair<bool, float> PII;
-enum shape { sphere, triangle };
-extern const int maxNumObjects;
 
-struct Material
-{
-	glm::vec3 emission;
-	glm::vec3 diffuse;
-	glm::vec3 specular;
-	glm::vec3 ambient;
-	float shininess;
-};
-
-struct Object
-{
-	shape type;
-	glm::vec3 centerPosition{ 0, 0, 0 };
-	float Radius;
-	glm::mat4 transform;
-
-	int indices[3];
-
-	Material material;
-};
 
 #undef pi
 #define pi 3.141592653589793f
 
 extern const float EPSILON;
 const float kInfinity = std::numeric_limits<float>::max();
+
 
 inline bool solveQuadratic(const float& a, const float& b, const float& c, float& x0, float& x1)
 {
