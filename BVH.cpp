@@ -4,17 +4,36 @@
 #include"BVH.hpp"
 #include"Object.hpp"
 
-bool cmp_x(Object* f1, Object* f2, vec3* vertex)
+void quickSort(std::vector<Object*>& objects, int x, vec3* vertex, int l, int r)
 {
-    return f1->getObjectBbox(vertex).Centroid().x < f2->getObjectBbox(vertex).Centroid().x;
-}
-bool cmp_y(Object* f1, Object* f2, vec3* vertex)
-{
-    return f1->getObjectBbox(vertex).Centroid().y < f2->getObjectBbox(vertex).Centroid().y;
-}
-bool cmp_z(Object* f1, Object* f2, vec3* vertex)
-{
-    return f1->getObjectBbox(vertex).Centroid().z < f2->getObjectBbox(vertex).Centroid().z;
+    if (l >= r) return;
+
+    int i = l - 1, j = r + 1;
+    int mid = l + r >> 1;
+    Object* middle = objects[mid];
+
+    while (i < j)
+    {
+        if (x == 0)
+        {
+            do i++; while (objects[i]->getObjectBbox(vertex).Centroid().x < middle->getObjectBbox(vertex).Centroid().x);
+            do j--; while (objects[j]->getObjectBbox(vertex).Centroid().x > middle->getObjectBbox(vertex).Centroid().x);
+        }
+        else if (x == 1)
+        {
+            do i++; while (objects[i]->getObjectBbox(vertex).Centroid().y < middle->getObjectBbox(vertex).Centroid().y);
+            do j--; while (objects[j]->getObjectBbox(vertex).Centroid().y > middle->getObjectBbox(vertex).Centroid().y);
+        }
+        else
+        {
+            do i++; while (objects[i]->getObjectBbox(vertex).Centroid().z < middle->getObjectBbox(vertex).Centroid().z);
+            do j--; while (objects[j]->getObjectBbox(vertex).Centroid().z > middle->getObjectBbox(vertex).Centroid().z);
+        }
+        if (i < j) std::swap(objects[i], objects[j]);
+    }
+
+    quickSort(objects, x, vertex, l, j);
+    quickSort(objects, x, vertex, j + 1, r);
 }
 
 BVHAccel::BVHAccel(std::vector<Object*> p, int maxPrimsInNode, SplitMethod splitMethod, vec3* vertex)
@@ -43,11 +62,7 @@ BVHBuildNode* BVHAccel::recursiveBuild(std::vector<Object*> objects, vec3* verte
 {
     BVHBuildNode* node = new BVHBuildNode();
 
-    Bbox bounds;
-    for (int i = 0; i < objects.size(); i++)
-    {
-        bounds = Union(bounds, objects[i]->getObjectBbox(vertex));
-    }
+    
     if (objects.size() == 1)
     {
         //leafNode created
@@ -71,13 +86,8 @@ BVHBuildNode* BVHAccel::recursiveBuild(std::vector<Object*> objects, vec3* verte
         for (int i = 0; i < objects.size(); i++)
             centroidBounds =
             Union(centroidBounds, objects[i]->getObjectBbox(vertex).Centroid());
-        int dim = centroidBounds.maxExtent();
-        if (dim == 0)
-            std::sort(objects.begin(), objects.end(), cmp_x);
-        else if (dim == 1)
-            std::sort(objects.begin(), objects.end(), cmp_y);
-        else
-            std::sort(objects.begin(), objects.end(), cmp_z);
+        int dim = centroidBounds.maxExtent(), size = objects.size() - 1;
+        quickSort(objects, dim, vertex, 0, size);
 
         auto beginning = objects.begin();
         auto middling = objects.begin() + (objects.size() / 2);

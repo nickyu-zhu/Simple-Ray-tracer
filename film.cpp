@@ -6,6 +6,8 @@
 #include"Intersection.hpp"
 #include<stdlib.h>
 #include"Object.hpp"
+#include"BVH.hpp"
+#include"Bbox.hpp"
 
 extern int numObjects;
 extern int numLights;
@@ -32,6 +34,8 @@ void Film::draw(Scene scene, Camera camera)
 	myActiveScene = &scene;
 
 	int printVal = 5;
+
+	myActiveScene->buildBVH();
 
 	int pix = w * h;
 	for (int y = 0; y < h; y++)
@@ -77,16 +81,16 @@ glm::vec3 Film::RayGen(uint32_t x, uint32_t y)
 	//bounces = (maxDepth != 0) ? maxDepth : 3;
 	for (int i = 0; i < bounces; i++)
 	{
-		Intersection intersection = TraceRay(ray);
+		Intersection intersection = TraceRay(ray, myActiveScene->bvh);
 		
-		if (intersection.hitDistance < 0.0f)
+		if (intersection.hitDistance <= 0.0f)
 		{
 			glm::vec3 backgroundColor = glm::vec3(0.0f, 0.0f, 0.0f);
 			color = backgroundColor;
 			break;
 		}
 
-		Object* object = (myActiveScene->Objects[intersection.ObjectIndex]);
+		Object* object = intersection.object;
 
 		vec3 objDiffuse = object->material.diffuse;
 		vec3 objSpecular = object->material.specular;
@@ -128,63 +132,17 @@ glm::vec3 Film::RayGen(uint32_t x, uint32_t y)
 	return color;
 }
 
-Intersection Film::TraceRay(Ray ray)
+Intersection Film::TraceRay(Ray ray, BVHAccel* bvh)
 {
-
-	int closestObject = -1, cnt = 0;
-	float hitDistance = std::numeric_limits<float>::max();
-	float t0 = 0, t1 = 0;
-	bool flag = true;
-	for (int i = 0; i < numObjects; i++)
-	{
-		Object* object = myActiveScene->Objects[i];
-
-		if (object->type == sphere)
-		{
-			if (RaySphereIntersect(ray, object).first)
-			{
-				t0 = RaySphereIntersect(ray, object).second;
-
-				if (t0 > 0.00001f && t0 < hitDistance)
-				{
-					hitDistance = t0;
-					closestObject = i;
-					flag = true;
-				}
-			}
-		}
-		else if(object->type == triangle)
-		{
-			if (RayTriangleIntersect(ray, object, myActiveScene->Vertex).first)
-			{
-				t1 = RayTriangleIntersect(ray, object, myActiveScene->Vertex).second;
-
-				if (t1 > 0.00001f && t1 < hitDistance)
-				{
-					hitDistance = t1;
-					closestObject = i;
-					flag = false;
-				}
-			}
-		}
-	}
-
-	if (closestObject < 0)
-		return Miss(ray);
-	
-	if (flag)
-		return ClosestHitSphere(ray, hitDistance, closestObject);
-	else
-		return ClosestHitTriangle(ray, hitDistance, closestObject, myActiveScene->Vertex);
+	Intersection isect = getIntersection(bvh->root, ray);
+	return isect;
 }
 
-Intersection Film::ClosestHitSphere(Ray ray, float hitDistance, int objectIndex)
+Intersection Film::ClosestHitSphere(Ray ray, float hitDistance, Object* closestSphere)
 {
 	Intersection intersection;
 	intersection.hitDistance = hitDistance;
-	intersection.ObjectIndex = objectIndex;
-
-	Object* closestSphere = myActiveScene->Objects[objectIndex];
+	intersection.object = closestSphere;
 
 	mat4 invTransf = glm::inverse(closestSphere->transform);
 	vec3 oriTransf = vec3(invTransf * vec4(ray.Origin, 1.0f));
@@ -202,13 +160,11 @@ Intersection Film::ClosestHitSphere(Ray ray, float hitDistance, int objectIndex)
 	return intersection;
 }
 
-Intersection Film::ClosestHitTriangle(Ray ray, float hitDistance, int objectIndex, vec3* vertices)
+Intersection Film::ClosestHitTriangle(Ray ray, float hitDistance, Object* closestTriangle, vec3* vertices)
 {
 	Intersection intersection;
 	intersection.hitDistance = hitDistance;
-	intersection.ObjectIndex = objectIndex;
-
-	Object* closestTriangle = myActiveScene->Objects[objectIndex];
+	intersection.object = closestTriangle;
 
 	vec3 A = vec3(closestTriangle->transform * vec4(vertices[closestTriangle->indices[0]], 1));
 	vec3 B = vec3(closestTriangle->transform * vec4(vertices[closestTriangle->indices[1]], 1));
@@ -230,4 +186,67 @@ Intersection Film::Miss(Ray ray)
 	return intersection;
 }
 
+Intersection Film::findIntersection(Ray ray, Object* object)
+{
+	if (object->type == sphere)
+	{
+		if (RaySphereIntersect(ray, object).first)
+		{
+			float t0 = RaySphereIntersect(ray, object).second;
+			if (t0 >= 0.000001)
+				return ClosestHitSphere(ray, t0, object);
+			else
+				return Miss(ray);
+		}
+		else
+			return Miss(ray);
+	}
+	else
+	{
+		if (RayTriangleIntersect(ray, object, myActiveScene->Vertex).first)
+		{
+			float t1 = RayTriangleIntersect(ray, object, myActiveScene->Vertex).second;
+			if (t1 >= 0.000001)
+				return ClosestHitTriangle(ray, t1, object, myActiveScene->Vertex);
+			else
+				return Miss(ray);
+		}
+		else
+			return Miss(ray);
+	}
+}
 
+Intersection Film::getIntersection(BVHBuildNode* node, Ray ray)
+{
+	float x = 0, y = 0, z = 0;
+	if (ray.Direction.x != 0.0f) x = 1.0f / ray.Direction.x;
+	if (ray.Direction.y != 0.0f) y = 1.0f / ray.Direction.y;
+	if (ray.Direction.z != 0.0f) z = 1.0f / ray.Direction.z;
+	vec3 invDir(x, y, z);
+
+	std::array<int, 3> dirIsNeg;
+	dirIsNeg[0] = ray.Direction.x > 0 ? 0 : 1;
+	dirIsNeg[1] = ray.Direction.y > 0 ? 0 : 1;
+	dirIsNeg[2] = ray.Direction.z > 0 ? 0 : 1;
+
+	if (!node->bounds.IntersectionP(ray, invDir, dirIsNeg))
+	{
+		return Miss(ray);
+	}
+
+
+	if (node->left == nullptr && node->right == nullptr)
+	{
+		return findIntersection(ray, node->object);
+	}
+		
+
+	Intersection left = getIntersection(node->left, ray);
+	Intersection right = getIntersection(node->right, ray);
+	if (left.hitDistance > 0 && right.hitDistance > 0)
+		return left.hitDistance <= right.hitDistance ? left : right;
+	else if (left.hitDistance > 0)
+		return left;
+	else
+		return right;
+}

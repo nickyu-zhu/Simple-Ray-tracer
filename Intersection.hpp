@@ -1,5 +1,6 @@
 #pragma once
 #include<glm/glm.hpp>
+#include"Object.hpp"
 
 class Intersection
 {
@@ -8,5 +9,5 @@ public:
 	glm::vec3 WorldPosition;
 	glm::vec3 WorldNormal;
 
-	int ObjectIndex;
+	Object* object;
 };

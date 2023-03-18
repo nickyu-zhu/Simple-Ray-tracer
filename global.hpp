@@ -6,6 +6,7 @@
 #include"Bbox.hpp"
 #include"Utils.h"
 #include"Object.hpp"
+#include"Intersection.hpp"
 typedef std::pair<bool, float> PII;
 
 

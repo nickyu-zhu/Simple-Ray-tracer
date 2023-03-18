@@ -71,23 +71,38 @@ public:
 inline bool Bbox::IntersectionP(const Ray& ray, const vec3& invDir,
 									const std::array<int, 3>& dirisNeg) const
 {
-	float min_x = (pMin.x - ray.Origin.x) * invDir[0];
-	float max_x = (pMax.x - ray.Origin.x) * invDir[0];
+	float min_x = std::numeric_limits<float>::lowest();
+	float max_x = std::numeric_limits<float>::max();
+	if (invDir[0] != 0)
+	{
+		min_x = (pMin.x - ray.Origin.x) * invDir[0];
+		max_x = (pMax.x - ray.Origin.x) * invDir[0];
+	}
 
-	float min_y = (pMin.y - ray.Origin.y) * invDir[1];
-	float max_y = (pMax.y - ray.Origin.y) * invDir[1];
+	float min_y = std::numeric_limits<float>::lowest();
+	float max_y = std::numeric_limits<float>::max();
+	if (invDir[1] != 0)
+	{
+		min_y = (pMin.y - ray.Origin.y) * invDir[1];
+		max_y = (pMax.y - ray.Origin.y) * invDir[1];
+	}
 
-	float min_z = (pMin.z - ray.Origin.z) * invDir[2];
-	float max_z = (pMax.z - ray.Origin.z) * invDir[2];
+	float min_z = std::numeric_limits<float>::lowest();
+	float max_z = std::numeric_limits<float>::max();
+	if (invDir[2] != 0)
+	{
+		min_z = (pMin.z - ray.Origin.z) * invDir[2];
+		max_z = (pMax.z - ray.Origin.z) * invDir[2];
+	}
 
-	if (dirisNeg[0] < 0) std::swap(min_x, max_x);
-	if (dirisNeg[1] < 0) std::swap(min_y, max_y);
-	if (dirisNeg[2] < 0) std::swap(min_z, max_z);
+	if (dirisNeg[0] && invDir[0] != 0.0f) std::swap(min_x, max_x);
+	if (dirisNeg[1] && invDir[1] != 0.0f) std::swap(min_y, max_y);
+	if (dirisNeg[2] && invDir[2] != 0.0f) std::swap(min_z, max_z);
 
 	float enter = std::max(min_x, std::max(min_y, min_z));
 	float exit = std::min(max_x, std::min(max_y, max_z));
 
-	if (enter < exit && exit >= 0)
+	if (enter <= exit && exit >= 0)
 		return true;
 	else
 		return false;
