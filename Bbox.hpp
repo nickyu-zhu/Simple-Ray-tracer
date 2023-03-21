@@ -1,12 +1,7 @@
 #pragma once
-#include"Ray.h"
-#include<vector>
-#include<array>
-#include<glm/glm.hpp>
-#include"global.hpp"
-#include"Utils.h"
-#include<iostream>
-#include<cmath>
+#include <vector>
+#include <array>
+#include "Ray.hpp"
 
 class Bbox
 {
@@ -19,7 +14,7 @@ public:
 		pMin = vec3(minNum, minNum, minNum);
 		pMax = vec3(maxNum, maxNum, maxNum);
 	}
-	Bbox(const vec3 p): pMin(p), pMax(p){}
+	Bbox(const vec3 p) : pMin(p), pMax(p) {}
 	Bbox(const vec3 p1, const vec3 p2)
 	{
 		pMin = vec3(fmin(p1.x, p2.x), fmin(p1.y, p2.y), fmin(p1.z, p2.z));
@@ -50,7 +45,7 @@ public:
 	Bbox Intersect(const Bbox& b)
 	{
 		return Bbox(vec3(fmax(pMin.x, b.pMin.x), fmax(pMin.y, b.pMin.y), fmax(pMin.z, b.pMin.z))
-						, vec3(fmin(pMax.x, b.pMax.x), fmin(pMax.y, b.pMax.y), fmin(pMax.z, b.pMax.z)));
+			, vec3(fmin(pMax.x, b.pMax.x), fmin(pMax.y, b.pMax.y), fmin(pMax.z, b.pMax.z)));
 	}
 
 	bool Inside(const vec3& p, const Bbox& b)
@@ -64,35 +59,33 @@ public:
 		return (i == 0) ? pMin : pMax;
 	}
 
-	inline bool IntersectionP(const Ray& ray, const vec3& invDir,
-								const std::array<int, 3>& dirisNeg) const;
+	inline bool IntersectionP(const Ray& ray, const vec3& invDir, const std::array<int, 3>& dirisNeg) const;
 };
 
-inline bool Bbox::IntersectionP(const Ray& ray, const vec3& invDir,
-									const std::array<int, 3>& dirisNeg) const
+inline bool Bbox::IntersectionP(const Ray& ray, const vec3& invDir, const std::array<int, 3>& dirisNeg) const
 {
 	float min_x = std::numeric_limits<float>::lowest();
 	float max_x = std::numeric_limits<float>::max();
 	if (invDir[0] != 0)
 	{
-		min_x = (pMin.x - ray.Origin.x) * invDir[0];
-		max_x = (pMax.x - ray.Origin.x) * invDir[0];
+		min_x = (pMin.x - ray.origin.x) * invDir[0];
+		max_x = (pMax.x - ray.origin.x) * invDir[0];
 	}
 
 	float min_y = std::numeric_limits<float>::lowest();
 	float max_y = std::numeric_limits<float>::max();
 	if (invDir[1] != 0)
 	{
-		min_y = (pMin.y - ray.Origin.y) * invDir[1];
-		max_y = (pMax.y - ray.Origin.y) * invDir[1];
+		min_y = (pMin.y - ray.origin.y) * invDir[1];
+		max_y = (pMax.y - ray.origin.y) * invDir[1];
 	}
 
 	float min_z = std::numeric_limits<float>::lowest();
 	float max_z = std::numeric_limits<float>::max();
 	if (invDir[2] != 0)
 	{
-		min_z = (pMin.z - ray.Origin.z) * invDir[2];
-		max_z = (pMax.z - ray.Origin.z) * invDir[2];
+		min_z = (pMin.z - ray.origin.z) * invDir[2];
+		max_z = (pMax.z - ray.origin.z) * invDir[2];
 	}
 
 	if (dirisNeg[0] && invDir[0] != 0.0f) std::swap(min_x, max_x);

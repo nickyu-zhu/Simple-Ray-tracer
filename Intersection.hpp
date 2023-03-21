@@ -1,13 +1,11 @@
 #pragma once
-#include<glm/glm.hpp>
-#include"Object.hpp"
+#include "Object.hpp"
 
 class Intersection
 {
 public:
-	float hitDistance;
-	glm::vec3 WorldPosition;
-	glm::vec3 WorldNormal;
-
-	Object* object;
+	float hitDistance; // min t of the ray
+	vec3 WorldPosition; // WorldPosition of the hitPoint
+	vec3 WorldNormal; // WorldNormal of the hitPoint
+	Object* object; // hit object
 };

@@ -1,18 +1,13 @@
 #pragma once
-#include<vector>
-#include<memory>
-#include"global.hpp"
-#include"Ray.h"
-#include"Bbox.hpp"
-#include"Intersection.hpp"
+#include <vector>
+#include <memory>
+#include "Object.hpp"
 
 struct BVHBuildNode;
 
-inline int leafNodes, totalLeafNodes, totalPrimitives, interiorNodes;
-
 class BVHAccel {
 public:
-	enum class SplitMethod{Naive, SAH};
+	enum class SplitMethod { Naive, SAH };
 	BVHAccel(std::vector<Object*> p, int maxPrimsInNode, SplitMethod splitMethod, vec3* vertex);
 	~BVHAccel();
 
@@ -32,8 +27,8 @@ struct BVHBuildNode
 	BVHBuildNode* right;
 	Object* object;
 
-public:
 	int splitAxis = 0, firstPrimOffset = 0, nPrimitive = 0;
+
 	BVHBuildNode() {
 		bounds = Bbox();
 		left = nullptr, right = nullptr;

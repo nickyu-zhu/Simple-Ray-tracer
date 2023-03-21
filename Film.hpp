@@ -1,22 +1,22 @@
 #pragma once
+#include <FreeImage.h>
+#include "Camera.hpp"
+#include "Scene.hpp"
+#include "Intersection.hpp"
 
-#include<FreeImage.h>
-#include<glm/glm.hpp>
-#include"Camera.h"
-#include"Ray.h"
-#include"Scene.h"
-#include"Intersection.hpp"
-#include"BVH.hpp"
+typedef std::pair<bool, float> PII;
 
 class Film {
 private:
 	int w, h;
 	BYTE* pixels;
 
+	const char* outputFilename;
+
 	Scene* myActiveScene = nullptr;
 	Camera* myActiveCamera = nullptr;
 
-	glm::vec3 RayGen(uint32_t x, uint32_t y);
+	vec3 FindColor(Ray ray, int currDepth = 0);
 
 	Intersection TraceRay(Ray ray, BVHAccel* root);
 	Intersection ClosestHitSphere(Ray ray, float hitDistance, Object* closestSphere);
@@ -25,8 +25,9 @@ private:
 
 	Intersection findIntersection(Ray ray, Object* object);
 	Intersection getIntersection(BVHBuildNode* node, Ray ray);
+
 public:
-	Film(int _w, int _h){
+	Film(int _w, int _h) {
 		w = _w, h = _h;
 		pixels = new BYTE[3 * w * h];
 	}
@@ -35,5 +36,6 @@ public:
 		delete[] pixels;
 	}
 
-	void draw(Scene scene, Camera camera);
+	void setOutputFilename(const char* filename) { outputFilename = filename; }
+	void Render(Scene scene, Camera camera);
 };

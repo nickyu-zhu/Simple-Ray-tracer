@@ -1,141 +1,59 @@
-#include <FreeImage.h>
-#include "film.h"
-#include"Camera.h"
-#include"Ray.h"
-#include"Scene.h"
-#include"Intersection.hpp"
-#include<stdlib.h>
-#include"Object.hpp"
-#include"BVH.hpp"
-#include"Bbox.hpp"
+#include "Film.hpp"
+#include <stdlib.h>
+#include "Object.hpp"
+#include "Bbox.hpp"
 
 extern int numObjects;
 extern int numLights;
 extern vec3 attenuation;
 extern int maxDepth;
-extern const char* outputFilename;
 
-namespace Utils {
-	static uint32_t ConvertToRGB(const glm::vec3& color)
-	{
-		uint8_t r = (uint8_t)(color.r * 255.0f);
-		uint8_t g = (uint8_t)(color.g * 255.0f);
-		uint8_t b = (uint8_t)(color.b * 255.0f);
+const float bias = 0.01f; // avoid self shadowing
 
-		uint32_t result = (b << 16) | (g << 8) | r;
-		return result;
+/*---------------------------------------------------------- Intersect ----------------------------------------------------------*/
+inline PII RaySphereIntersect(Ray ray, Object* obj)
+{
+	mat4 invTransf = glm::inverse(obj->transform);
+	vec3 oriTransf = vec3(invTransf * vec4(ray.origin, 1.0f));
+	vec3 dirTransf = vec3(invTransf * vec4(ray.direction, 0.0f));
+
+	float a = glm::dot(dirTransf, dirTransf);
+	float b = 2 * glm::dot(dirTransf, (oriTransf - obj->centerPosition));
+	float c = glm::dot(oriTransf - obj->centerPosition, oriTransf - obj->centerPosition) - obj->Radius * obj->Radius;
+	float delta = b * b - 4 * a * c;
+	if (delta >= 0) {
+		float t1 = (-b + sqrt(delta)) / (2 * a);
+		float t2 = (-b - sqrt(delta)) / (2 * a);
+		float t = fmin(t1, t2);
+		if (0.00001 < t) return { true, t };
 	}
+	return { false, -1.0f };
 }
 
-
-void Film::draw(Scene scene, Camera camera)
+inline PII RayTriangleIntersect(Ray ray, Object* obj, vec3* vertices)
 {
-	myActiveCamera = &camera;
-	myActiveScene = &scene;
+	vec3 A = vec3(obj->transform * vec4(vertices[obj->indices[0]], 1));
+	vec3 B = vec3(obj->transform * vec4(vertices[obj->indices[1]], 1));
+	vec3 C = vec3(obj->transform * vec4(vertices[obj->indices[2]], 1));
 
-	int printVal = 5;
+	vec3 triNormal = glm::normalize(glm::cross(C - A, B - A));
+	float t = (glm::dot(A, triNormal) - glm::dot(ray.origin, triNormal)) / glm::dot(ray.direction, triNormal);
+	vec3 P = ray.origin + t * ray.direction;
 
-	myActiveScene->buildBVH();
+	// P in triangle? Barycentric Coord -- triangle area ratio, refer to ravi's lecture 16
+	// for beta
+	vec3 ACcrossAB = glm::cross(C - A, B - A);
+	vec3 ACcrossAP = glm::cross(C - A, P - A);
+	// for gamma
+	vec3 ABcrossAC = -ACcrossAB;
+	vec3 ABcrossAP = glm::cross(B - A, P - A);
 
-	int pix = w * h;
-	for (int y = 0; y < h; y++)
-	{
-		for (int x = 0; x < w; x++)
-		{
-			int base = 3 * (x + y * w);
-			glm::vec3 color = RayGen(x, y);
-			color = glm::clamp(color, glm::vec3(0.0f), glm::vec3(1.0f));
-			uint32_t result_color = Utils::ConvertToRGB(color);
-			
-			pixels[base] = (uint8_t)(result_color >> 16);
-			pixels[base + 1] = (uint8_t)(result_color >> 8);
-			pixels[base + 2] = (uint8_t)result_color;
-
-			int finished = (y * w + x) / (float)pix * 100;
-			if (finished % 100 >= printVal) {
-				printf("Ray Tracing Progress: %i %%\n", finished);
-				printVal += 5;
-			}
-		}
+	if (glm::dot(ACcrossAB, ACcrossAP) >= 0 && glm::dot(ABcrossAC, ABcrossAP) >= 0) { // beta, gamma >= 0
+		float beta = glm::length(ACcrossAP) / glm::length(ACcrossAB);
+		float gamma = glm::length(ABcrossAP) / glm::length(ABcrossAC);
+		if (beta + gamma <= 1 && 0.00001 < t) return { true, t };
 	}
-	FreeImage_Initialise();
-	FIBITMAP* img = FreeImage_ConvertFromRawBits(pixels, w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
-
-	const char* imgName = "raytrace.png";
-	//if (outputFilename) imgName = outputFilename;
-	FreeImage_Save(FIF_PNG, img, imgName, 0);
-	FreeImage_DeInitialise();
-
-}
-
-
-glm::vec3 Film::RayGen(uint32_t x, uint32_t y)
-{
-	Ray ray;
-	ray.Origin = myActiveCamera->getCamPositon();
-	ray.Direction = myActiveCamera->GetRayDirections()[x + y * w];
-
-	glm::vec3 color(0.0f);
-
-	int bounces = 1;
-	//bounces = (maxDepth != 0) ? maxDepth : 3;
-	for (int i = 0; i < bounces; i++)
-	{
-		Intersection intersection = TraceRay(ray, myActiveScene->bvh);
-		
-		if (intersection.hitDistance <= 0.0f)
-		{
-			glm::vec3 backgroundColor = glm::vec3(0.0f, 0.0f, 0.0f);
-			color = backgroundColor;
-			break;
-		}
-
-		Object* object = intersection.object;
-
-		vec3 objDiffuse = object->material.diffuse;
-		vec3 objSpecular = object->material.specular;
-
-		for (int i = 0; i < numLights; i++)
-		{
-			Light* curr_light = &(myActiveScene->lights[i]);
-			vec3 lightDir = vec3(0.0f);
-			float attnCoeff = 1;
-
-			if (curr_light->lightPosition[3] == 0)
-			{
-				lightDir = glm::normalize(vec3(curr_light->lightPosition));
-				
-			}
-			else
-			{
-				lightDir = vec3(curr_light->lightPosition) - intersection.WorldPosition;
-				float dist = glm::length(lightDir);
-				if (!attenuation.z && !attenuation.x && !attenuation.y) // notice that the attnCoef may be overflow without this line.
-					attnCoeff = 1;
-				else
-					attnCoeff = 1.0f / (attenuation.x + attenuation.y * dist + attenuation.z * dist * dist);
-				lightDir = glm::normalize(lightDir);
-			}
-			vec3 eyedirn = glm::normalize(intersection.WorldPosition - ray.Origin);
-			vec3 halfvec = glm::normalize(-eyedirn + lightDir);
-			vec3 lightCol = curr_light->lightColor;
-
-			color += attnCoeff * ComputeColor(lightDir, lightCol, intersection.WorldNormal, halfvec, objDiffuse, objSpecular, object->material.shininess);
-		}
-		
-		color += object->material.emission + object->material.ambient;
-
-		ray.Origin = intersection.WorldPosition;
-		ray.Direction = glm::reflect(ray.Direction, intersection.WorldNormal);
-	}
-	
-	return color;
-}
-
-Intersection Film::TraceRay(Ray ray, BVHAccel* bvh)
-{
-	Intersection isect = getIntersection(bvh->root, ray);
-	return isect;
+	return { false, -1.0f };
 }
 
 Intersection Film::ClosestHitSphere(Ray ray, float hitDistance, Object* closestSphere)
@@ -145,10 +63,10 @@ Intersection Film::ClosestHitSphere(Ray ray, float hitDistance, Object* closestS
 	intersection.object = closestSphere;
 
 	mat4 invTransf = glm::inverse(closestSphere->transform);
-	vec3 oriTransf = vec3(invTransf * vec4(ray.Origin, 1.0f));
-	vec3 dirTransf = vec3(invTransf * vec4(ray.Direction, 0.0f));
+	vec3 oriTransf = vec3(invTransf * vec4(ray.origin, 1.0f));
+	vec3 dirTransf = vec3(invTransf * vec4(ray.direction, 0.0f));
 
-	glm::vec3 hitPosition = oriTransf + hitDistance * dirTransf;
+	vec3 hitPosition = oriTransf + hitDistance * dirTransf;
 	vec3 sphereNormalObj = hitPosition - closestSphere->centerPosition;
 
 	vec4 hitPointWorld = closestSphere->transform * vec4(hitPosition, 1.0f);
@@ -171,7 +89,7 @@ Intersection Film::ClosestHitTriangle(Ray ray, float hitDistance, Object* closes
 	vec3 C = vec3(closestTriangle->transform * vec4(vertices[closestTriangle->indices[2]], 1));
 
 	vec3 triNormal = glm::normalize(glm::cross(B - A, C - A));
-	vec3 P = ray.Origin + hitDistance * ray.Direction;
+	vec3 P = ray.origin + hitDistance * ray.direction;
 
 	intersection.WorldPosition = P;
 	intersection.WorldNormal = triNormal;
@@ -192,22 +110,19 @@ Intersection Film::findIntersection(Ray ray, Object* object)
 	{
 		if (RaySphereIntersect(ray, object).first)
 		{
-			float t0 = RaySphereIntersect(ray, object).second;
-			if (t0 >= 0.000001)
-				return ClosestHitSphere(ray, t0, object);
-			else
-				return Miss(ray);
+			float t = RaySphereIntersect(ray, object).second;
+			return ClosestHitSphere(ray, t, object);
 		}
 		else
 			return Miss(ray);
 	}
 	else
 	{
-		if (RayTriangleIntersect(ray, object, myActiveScene->Vertex).first)
+		if (RayTriangleIntersect(ray, object, myActiveScene->vertices).first)
 		{
-			float t1 = RayTriangleIntersect(ray, object, myActiveScene->Vertex).second;
+			float t1 = RayTriangleIntersect(ray, object, myActiveScene->vertices).second;
 			if (t1 >= 0.000001)
-				return ClosestHitTriangle(ray, t1, object, myActiveScene->Vertex);
+				return ClosestHitTriangle(ray, t1, object, myActiveScene->vertices);
 			else
 				return Miss(ray);
 		}
@@ -219,27 +134,25 @@ Intersection Film::findIntersection(Ray ray, Object* object)
 Intersection Film::getIntersection(BVHBuildNode* node, Ray ray)
 {
 	float x = 0, y = 0, z = 0;
-	if (ray.Direction.x != 0.0f) x = 1.0f / ray.Direction.x;
-	if (ray.Direction.y != 0.0f) y = 1.0f / ray.Direction.y;
-	if (ray.Direction.z != 0.0f) z = 1.0f / ray.Direction.z;
+	if (ray.direction.x != 0.0f) x = 1.0f / ray.direction.x;
+	if (ray.direction.y != 0.0f) y = 1.0f / ray.direction.y;
+	if (ray.direction.z != 0.0f) z = 1.0f / ray.direction.z;
 	vec3 invDir(x, y, z);
 
 	std::array<int, 3> dirIsNeg;
-	dirIsNeg[0] = ray.Direction.x > 0 ? 0 : 1;
-	dirIsNeg[1] = ray.Direction.y > 0 ? 0 : 1;
-	dirIsNeg[2] = ray.Direction.z > 0 ? 0 : 1;
+	dirIsNeg[0] = ray.direction.x > 0 ? 0 : 1;
+	dirIsNeg[1] = ray.direction.y > 0 ? 0 : 1;
+	dirIsNeg[2] = ray.direction.z > 0 ? 0 : 1;
 
 	if (!node->bounds.IntersectionP(ray, invDir, dirIsNeg))
 	{
 		return Miss(ray);
 	}
 
-
 	if (node->left == nullptr && node->right == nullptr)
 	{
 		return findIntersection(ray, node->object);
 	}
-		
 
 	Intersection left = getIntersection(node->left, ray);
 	Intersection right = getIntersection(node->right, ray);
@@ -250,3 +163,129 @@ Intersection Film::getIntersection(BVHBuildNode* node, Ray ray)
 	else
 		return right;
 }
+
+/*---------------------------------------------------------- Color ----------------------------------------------------------*/
+static uint32_t ConvertToRGB(const vec3& color)
+{
+	uint8_t r = (uint8_t)(color.r * 255.0f);
+	uint8_t g = (uint8_t)(color.g * 255.0f);
+	uint8_t b = (uint8_t)(color.b * 255.0f);
+
+	uint32_t result = (b << 16) | (g << 8) | r;
+	return result;
+}
+
+inline vec3 ComputeColor(vec3 lightDir, vec3 lightCol, vec3 normal, vec3 halfvec, vec3 mydiffuse, vec3 myspecular, float myshininess)
+{
+	float nDotL = glm::dot(normal, lightDir);
+	vec3 lambert = mydiffuse * lightCol * fmax(nDotL, 0.0f);
+	float nDotH = glm::dot(normal, halfvec);
+	vec3 phong = myspecular * lightCol * pow(fmax(nDotH, 0.0f), myshininess);
+	return (lambert + phong);
+}
+
+/*---------------------------------------------------------- Render ----------------------------------------------------------*/
+Intersection Film::TraceRay(Ray ray, BVHAccel* bvh)
+{
+	Intersection isect = getIntersection(bvh->root, ray);
+	return isect;
+}
+
+vec3 Film::FindColor(Ray ray, int currDepth)
+{
+	vec3 currDepthColor(0.0f);
+	if (currDepth == maxDepth) return currDepthColor;
+	
+	vec3 bgColor(0.0f);
+	Intersection intersection = TraceRay(ray, myActiveScene->bvh);
+	if (intersection.hitDistance <= 0.0f) return bgColor;
+
+	Object* object = intersection.object;
+
+	vec3 objDiffuse = object->material.diffuse;
+	vec3 objSpecular = object->material.specular;
+	vec3 rayDir = glm::normalize(ray.direction); // from eye to hit point
+
+	for (int i = 0; i < numLights; i++) {
+		Light* curr_light = &(myActiveScene->lights[i]);
+		vec3 lightDir = vec3(0.0f);
+		float visibility = 1.0f;
+		float attnCoeff = 1.0f;
+
+		if (curr_light->lightPosition.w == 0) {
+			lightDir = glm::normalize(vec3(curr_light->lightPosition));
+		}
+		else {
+			lightDir = vec3(curr_light->lightPosition) - intersection.WorldPosition; // from hit point to light
+			float dist = glm::length(lightDir);
+			attnCoeff = 1.0f / (attenuation.x + attenuation.y * dist + attenuation.z * dist * dist);
+			lightDir = glm::normalize(lightDir);
+		}
+		vec3 halfvec = glm::normalize(-rayDir + lightDir);
+		vec3 lightCol = curr_light->lightColor;
+
+		// visibility & shadow
+		Ray toLight(intersection.WorldPosition + lightDir * bias, lightDir);
+		Intersection nextIntersection = TraceRay(toLight, myActiveScene->bvh);
+
+		if (nextIntersection.hitDistance > 0.0f)
+			visibility = 0;
+		currDepthColor += visibility * attnCoeff * ComputeColor(lightDir, lightCol, intersection.WorldNormal, halfvec, objDiffuse, objSpecular, object->material.shininess);
+	
+	}
+
+	currDepthColor += object->material.emission + object->material.ambient;
+	// add next depth color
+	vec3 reflDir = glm::normalize(rayDir - 2 * glm::dot(intersection.WorldNormal, rayDir) * intersection.WorldNormal);
+	Ray reflRay(intersection.WorldPosition, reflDir);
+	currDepthColor += FindColor(reflRay, currDepth + 1) * objSpecular;
+	
+	return currDepthColor;
+}
+
+void Film::Render(Scene scene, Camera camera)
+{
+	myActiveCamera = &camera;
+	myActiveScene = &scene;
+
+	int printVal = 5;
+
+	myActiveScene->buildBVH();
+
+	int pix = w * h;
+	for (int y = 0; y < h; y++)
+	{
+		for (int x = 0; x < w; x++)
+		{
+			int base = 3 * (x + y * w);
+			Ray ray = myActiveCamera->RayThruPixel(x + 0.5f, y + 0.5f);
+			vec3 color = FindColor(ray);
+			color = glm::clamp(color, vec3(0.0f), vec3(1.0f));
+			uint32_t result_color = ConvertToRGB(color);
+
+			pixels[base] = (uint8_t)(result_color >> 16);
+			pixels[base + 1] = (uint8_t)(result_color >> 8);
+			pixels[base + 2] = (uint8_t)result_color;
+
+			// progress bar
+			int finished = (y * w + x) / (float)pix * 100;
+			if (finished % 100 >= printVal) {
+				printf("Ray Tracing Progress: %i %%\n", finished);
+				printVal += 5;
+			}
+		}
+	}
+	FreeImage_Initialise();
+	FIBITMAP* img = FreeImage_ConvertFromRawBits(pixels, w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, true);
+
+	FreeImage_Save(FIF_PNG, img, outputFilename, 0);
+	FreeImage_DeInitialise();
+
+}
+
+
+
+
+
+
+

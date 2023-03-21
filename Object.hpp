@@ -1,19 +1,17 @@
 #pragma once
-#include<iostream>
-#include<cmath>
-#include<random>
-#include"Ray.h"
-#include"Bbox.hpp"
-#include"Utils.h"
-#include"global.hpp"
+#include <iostream>
+#include <cmath>
+#include <random>
+#include "Bbox.hpp"
+
 enum shape { sphere, triangle };
 
 struct Material
 {
-	glm::vec3 emission;
-	glm::vec3 diffuse;
-	glm::vec3 specular;
-	glm::vec3 ambient;
+	vec3 emission;
+	vec3 diffuse;
+	vec3 specular;
+	vec3 ambient;
 	float shininess;
 };
 
@@ -21,9 +19,9 @@ class Object
 {
 public:
 	shape type;
-	glm::vec3 centerPosition{ 0, 0, 0 };
+	vec3 centerPosition = vec3(0.0f);
 	float Radius;
-	glm::mat4 transform;
+	mat4 transform;
 
 	int indices[3];
 

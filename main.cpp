@@ -1,41 +1,23 @@
-#include<iostream>
-#include"Scene.h"
-#include"Camera.h"
-#include"Film.h"
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <deque>
 #include <stack>
-#include<glm/glm.hpp>
-#include"Material.hpp"
-#include "Transform.h"
-#include<chrono>
-#include"Object.hpp"
+#include <chrono>
+#include "Transform.hpp"
+#include "Film.hpp"
 
 using namespace std;
 
-// Global variables
-// Since all files need access to it, we define extern as either blank or extern,
-// depending on if included in the main program or not.  
-
 /** General **/
 int width, height; // size
-int maxDepth;
-/** Camera **/
-vec3 center;
-float fovy;
-/** Lights **/
-vec3 attenuation;
-/** Materials **/
-float ambient[4]; // global ambient
-
-/** General **/
-const char* outputFilename;
+int maxDepth = 5;
 
 /** Camera **/
 vec3 eye; // The (regularly updated) vector coordinates of the eye 
 vec3 up;  // The (regularly updated) vector coordinates of the up 
+vec3 center;
+float fovy;
 
 /** Geometry **/
 // vertices
@@ -46,16 +28,18 @@ int numVertices;
 /** Lights **/
 // identifying directional & point depends on the 4th dimention of position
 const int maxNumLights = 10;
-int numLights;                     // How many lights are used 
+int numLights;
+vec3 attenuation(1, 0, 0);
 
 /** Materials **/
 float diffuse[3];
 float specular[3];
 float emission[3];
 float shininess;
+float ambient[3] = { 0.2f, 0.2f, 0.2f }; // global ambient
 
 // For multiple objects, read from a file.  
-const int maxNumObjects = 1000;
+const int maxNumObjects = 100000;
 int numObjects;
 
 bool readvals(stringstream& s, const int numvals, float* values)
@@ -70,7 +54,7 @@ bool readvals(stringstream& s, const int numvals, float* values)
     return true;
 }
 
-void readfile(const char* filename, Object* objects, Light* lights)
+const char* readfile(const char* filename, Object* objects, Light* lights)
 {
     string str, cmd, outfile;
     ifstream in;
@@ -133,9 +117,9 @@ void readfile(const char* filename, Object* objects, Light* lights)
                         validinput = readvals(s, 6, values); // Position/color for lts.
                         if (validinput) {
                             Light* light = &(lights[numLights]);
-                            light->lightColor = glm::vec3(values[3], values[4], values[5]);
-                            if (cmd == "directional") light->lightPosition = glm::vec4(values[0], values[1], values[2], 0);
-                            else if (cmd == "point") light->lightPosition = glm::vec4(values[0], values[1], values[2], 1);
+                            light->lightColor = vec3(values[3], values[4], values[5]);
+                            if (cmd == "directional") light->lightPosition = vec4(values[0], values[1], values[2], 0);
+                            else if (cmd == "point") light->lightPosition = vec4(values[0], values[1], values[2], 1);
                             numLights++;
                         }
                     }
@@ -209,18 +193,11 @@ void readfile(const char* filename, Object* objects, Light* lights)
                     else {
                         Object* obj = &(objects[numObjects]);
 
-                        // Set the object's light properties
-
-                        glm::vec3 _emission = { emission[0], emission[1], emission[2] };
-                        glm::vec3 _diffuse = { diffuse[0],diffuse[1],diffuse[2] };
-                        glm::vec3 _specular = { specular[0], specular[1], specular[2] };
-                        glm::vec3 _ambient = { ambient[0], ambient[1], ambient[2] };
-                        float _shininess = shininess;
-
-                        obj->material.emission = _emission;
-                        obj->material.diffuse = _diffuse;
-                        obj->material.specular = _specular;
-                        obj->material.ambient = _ambient;
+                        // Set the object's material properties
+                        obj->material.emission = vec3(emission[0], emission[1], emission[2]);
+                        obj->material.diffuse = vec3(diffuse[0], diffuse[1], diffuse[2]);
+                        obj->material.specular = vec3(specular[0], specular[1], specular[2]);
+                        obj->material.ambient = vec3(ambient[0], ambient[1], ambient[2]);
                         obj->material.shininess = shininess;
 
                         // Set the object's transform
@@ -245,8 +222,7 @@ void readfile(const char* filename, Object* objects, Light* lights)
                                 obj->indices[0] = values[0];
                                 obj->indices[1] = values[1];
                                 obj->indices[2] = values[2];
-                                obj->centerPosition = vec3(1 / 3, 1 / 3, 1 / 3) * (vertices[obj->indices[0]]
-                                    + vertices[obj->indices[1]] + vertices[obj->indices[2]]);
+                                obj->centerPosition = 1.0f / 3 * (vertices[obj->indices[0]] + vertices[obj->indices[1]] + vertices[obj->indices[2]]);
                             }
                             else {
                                 cerr << "ERROR: Failed reading triangle object";
@@ -293,37 +269,39 @@ void readfile(const char* filename, Object* objects, Light* lights)
         cerr << "Unable to Open Input Data File " << filename << "\n";
         throw 2;
     }
-}
+    if (!maxDepth) maxDepth = 1;
 
+    if (outfile.empty()) return "RayTraceImage.png";
+    else return _strdup(outfile.c_str());
+}
 
 int main(int argc, char* argv[])
 {
     auto start_time = std::chrono::high_resolution_clock::now();
     Object* objects = new Object[maxNumObjects];
     Light* lights = new Light[maxNumLights];
-	readfile(argv[1], objects, lights);
+    const char* outputFilename = readfile(argv[1], objects, lights);
 
-	Scene scene = Scene(width, height);
+    Scene scene = Scene(width, height);
 
     for (int i = 0; i < numObjects; i++)
         scene.addObject(&objects[i]);
 
-    scene.Vertex = vertices;
+    scene.vertices = vertices;
     scene.lights = lights;
 
-	Camera camera(eye, center, up, fovy);
-	camera.viewPortresize(scene.w, scene.h);
-	camera.calculateRayDirection();
-	Film film = Film(scene.w, scene.h);
-	film.draw(scene, camera);
-    printf("\nRay Tracing Finished!\n Please check the output file!\n");
+    Camera camera(eye, center, up, fovy, scene.w, scene.h);
+    Film film = Film(scene.w, scene.h);
+    film.setOutputFilename(outputFilename);
+    film.Render(scene, camera);
+    printf("\nRay Tracing Finished!\nPlease check the output file!\n");
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
     std::cout << "Time taken: " << duration.count() << "seconds" << std::endl;
 
     delete[] objects;
-	cin.get();
+    cin.get();
 
-	return 0;
+    return 0;
 }

@@ -1,8 +1,6 @@
-#include<algorithm>
-#include<cassert>
-#include"global.hpp"
-#include"BVH.hpp"
-#include"Object.hpp"
+#include <algorithm>
+#include <cassert>
+#include "BVH.hpp"
 
 void quickSort(std::vector<Object*>& objects, int x, vec3* vertex, int l, int r)
 {
@@ -37,8 +35,7 @@ void quickSort(std::vector<Object*>& objects, int x, vec3* vertex, int l, int r)
 }
 
 BVHAccel::BVHAccel(std::vector<Object*> p, int maxPrimsInNode, SplitMethod splitMethod, vec3* vertex)
-	: maxPrimsInNode(std::min(255, maxPrimsInNode)), splitMethod(SplitMethod::Naive),
-	primitives(std::move(p))
+    : maxPrimsInNode(std::min(255, maxPrimsInNode)), splitMethod(SplitMethod::Naive), primitives(std::move(p))
 {
     time_t start, stop;
     time(&start);
@@ -62,7 +59,7 @@ BVHBuildNode* BVHAccel::recursiveBuild(std::vector<Object*> objects, vec3* verte
 {
     BVHBuildNode* node = new BVHBuildNode();
 
-    
+
     if (objects.size() == 1)
     {
         //leafNode created
@@ -74,8 +71,8 @@ BVHBuildNode* BVHAccel::recursiveBuild(std::vector<Object*> objects, vec3* verte
     }
     else if (objects.size() == 2)
     {
-        node->left = recursiveBuild(std::vector{ objects[0] }, vertex);
-        node->right = recursiveBuild(std::vector{ objects[1] }, vertex);
+        node->left = recursiveBuild(std::vector<Object*>{ objects[0] }, vertex);
+        node->right = recursiveBuild(std::vector<Object*>{ objects[1] }, vertex);
 
         node->bounds = Union(node->left->bounds, node->right->bounds);
         return node;

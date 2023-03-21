@@ -1,5 +1,4 @@
-#include"Scene.h"
-#include"Bbox.hpp"
+#include "Scene.hpp"
 
 void Scene::addObject(Object* obj)
 {
@@ -9,5 +8,5 @@ void Scene::addObject(Object* obj)
 void Scene::buildBVH()
 {
 	printf("-----Generateing BVH...\n\n");
-	this->bvh = new BVHAccel(Objects, 1, BVHAccel::SplitMethod::Naive, Vertex);
+	this->bvh = new BVHAccel(Objects, 1, BVHAccel::SplitMethod::Naive, vertices);
 }

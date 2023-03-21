@@ -1,10 +1,9 @@
-#include "Transform.h"
-#include"global.hpp"
+#include "Transform.hpp"
 
 mat3 Transform::rotate(const float degrees, const vec3& axis)
 {
-    float cosValue = cos(pi / 180 * (degrees));
-    float sinValue = sin(pi / 180 * (degrees));
+    float cosValue = cos(glm::radians(degrees));
+    float sinValue = sin(glm::radians(degrees));
     mat3 identity = mat3(1.0f);
     vec3 axisUnit = glm::normalize(axis);
     float x = axisUnit.x;
@@ -56,7 +55,7 @@ mat4 Transform::lookAt(const vec3& eye, const vec3& center, const vec3& up)
 
 mat4 Transform::perspective(float fovy, float aspect, float zNear, float zFar)
 {
-    float d = 1 / tan(pi / 180 * fovy * 0.5f);
+    float d = 1 / tan(glm::radians(fovy * 0.5f));
     mat4 perspMtx = mat4(
         vec4(d / aspect, 0.0f, 0.0f, 0.0f),
         vec4(0.0f, d, 0.0f, 0.0f),
