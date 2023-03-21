@@ -258,7 +258,7 @@ void Film::Render(Scene scene, Camera camera)
 		for (int x = 0; x < w; x++)
 		{
 			int base = 3 * (x + y * w);
-			Ray ray = myActiveCamera->RayThruPixel(x + 0.5f, y + 0.5f);
+			Ray ray = myActiveCamera->RayThruPixel(x, y);
 			vec3 color = FindColor(ray);
 			color = glm::clamp(color, vec3(0.0f), vec3(1.0f));
 			uint32_t result_color = ConvertToRGB(color);
