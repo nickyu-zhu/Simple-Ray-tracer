@@ -281,7 +281,9 @@ int main(int argc, char* argv[])
     Object* objects = new Object[maxNumObjects];
     Light* lights = new Light[maxNumLights];
     const char* outputFilename = readfile(argv[1], objects, lights);
-
+    
+    cout << "Running Ray-Tracing for " << outputFilename << std::endl << std::endl;
+    
     Scene scene = Scene(width, height);
 
     for (int i = 0; i < numObjects; i++)

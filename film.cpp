@@ -223,14 +223,14 @@ vec3 Film::FindColor(Ray ray, int currDepth)
 		Ray toLight(intersection.WorldPosition, lightDir);
 		Intersection nextIntersection = TraceRay(toLight, myActiveScene->bvh);
 
-		if (nextIntersection.hitDistance > 0.0f && curr_light->lightPosition.w == 0)
-			visibility = 0;
-		else
-		{
-			vec3 l1 = nextIntersection.WorldPosition - intersection.WorldPosition;
-			vec3 l2 = vec3(curr_light->lightPosition) - intersection.WorldPosition;
-			if (glm::length(l1) < glm::length(l2))
-				visibility = 0;
+		if (nextIntersection.hitDistance > 0.0f) {
+			if (curr_light->lightPosition.w != 0) {
+				vec3 l1 = nextIntersection.WorldPosition - intersection.WorldPosition;
+				vec3 l2 = vec3(curr_light->lightPosition) - intersection.WorldPosition;
+				if (glm::length(l1) < glm::length(l2))
+					visibility = 0;
+			}
+			else visibility = 0;
 		}
 		currDepthColor += visibility * attnCoeff * ComputeColor(lightDir, lightCol, intersection.WorldNormal, halfvec, objDiffuse, objSpecular, object->material.shininess);
 	
