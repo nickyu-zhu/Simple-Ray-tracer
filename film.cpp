@@ -113,21 +113,16 @@ Intersection Film::findIntersection(Ray ray, Object* object)
 			float t = RaySphereIntersect(ray, object).second;
 			return ClosestHitSphere(ray, t, object);
 		}
-		else
-			return Miss(ray);
+		else return Miss(ray);
 	}
 	else
 	{
 		if (RayTriangleIntersect(ray, object, myActiveScene->vertices).first)
 		{
 			float t1 = RayTriangleIntersect(ray, object, myActiveScene->vertices).second;
-			if (t1 >= 0.000001)
-				return ClosestHitTriangle(ray, t1, object, myActiveScene->vertices);
-			else
-				return Miss(ray);
+			return ClosestHitTriangle(ray, t1, object, myActiveScene->vertices);
 		}
-		else
-			return Miss(ray);
+		else return Miss(ray);
 	}
 }
 
@@ -225,11 +220,18 @@ vec3 Film::FindColor(Ray ray, int currDepth)
 		vec3 lightCol = curr_light->lightColor;
 
 		// visibility & shadow
-		Ray toLight(intersection.WorldPosition + lightDir * bias, lightDir);
+		Ray toLight(intersection.WorldPosition, lightDir);
 		Intersection nextIntersection = TraceRay(toLight, myActiveScene->bvh);
 
-		if (nextIntersection.hitDistance > 0.0f)
+		if (nextIntersection.hitDistance > 0.0f && curr_light->lightPosition.w == 0)
 			visibility = 0;
+		else
+		{
+			vec3 l1 = nextIntersection.WorldPosition - intersection.WorldPosition;
+			vec3 l2 = vec3(curr_light->lightPosition) - intersection.WorldPosition;
+			if (glm::length(l1) < glm::length(l2))
+				visibility = 0;
+		}
 		currDepthColor += visibility * attnCoeff * ComputeColor(lightDir, lightCol, intersection.WorldNormal, halfvec, objDiffuse, objSpecular, object->material.shininess);
 	
 	}

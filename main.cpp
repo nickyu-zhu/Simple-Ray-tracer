@@ -249,7 +249,7 @@ const char* readfile(const char* filename, Object* objects, Light* lights)
                 else if (cmd == "rotate") {
                     validinput = readvals(s, 4, values);
                     if (validinput) {
-                        mat4 rotateMtx = mat4(Transform::rotate(values[3], vec3(values[0], values[1], values[2])));
+                        mat4 rotateMtx = Transform::rotate(values[3], vec3(values[0], values[1], values[2]));
                         *(&transfstack.top()) = transfstack.top() * rotateMtx;
                     }
                 }
